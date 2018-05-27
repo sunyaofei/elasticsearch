@@ -1,13 +1,13 @@
 [[modules-memcached]]
 == memcached
 
-The memcached module allows to expose *elasticsearch*
+The memcached module allows to expose *Elasticsearch*
 APIs over the memcached protocol (as closely
 as possible).
 
 It is provided as a plugin called `transport-memcached` and installing
 is explained
-https://github.com/elasticsearch/elasticsearch-transport-memcached[here]
+https://github.com/elastic/elasticsearch-transport-memcached[here]
 . Another option is to download the memcached plugin and placing it
 under the `plugins` directory.
 
@@ -18,7 +18,7 @@ automatically detecting the correct one to use.
 === Mapping REST to Memcached Protocol
 
 Memcached commands are mapped to REST and handled by the same generic
-REST layer in elasticsearch. Here is a list of the memcached commands
+REST layer in Elasticsearch. Here is a list of the memcached commands
 supported:
 
 [float]

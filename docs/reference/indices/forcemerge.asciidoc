@@ -10,10 +10,17 @@ This call will block until the merge is complete. If the http connection is
 lost, the request will continue in the background, and any new requests will
 block until the previous force merge is complete.
 
+WARNING: Force merge should only be called against *read-only indices*. Running 
+force merge against a read-write index can cause very large segments to be produced 
+(>5Gb per segment), and the merge policy will never consider it for merging again until 
+it mostly consists of deleted docs. This can cause very large segments to remain in the shards.
+
 [source,js]
 --------------------------------------------------
-$ curl -XPOST 'http://localhost:9200/twitter/_forcemerge'
+POST /twitter/_forcemerge
 --------------------------------------------------
+// CONSOLE
+// TEST[setup:twitter]
 
 [float]
 [[forcemerge-parameters]]
@@ -36,6 +43,13 @@ deletes. Defaults to `false`.  Note that this won't override the
 `flush`::  Should a flush be performed after the forced merge. Defaults to
 `true`.
 
+[source,js]
+--------------------------------------------------
+POST /kimchy/_forcemerge?only_expunge_deletes=false&max_num_segments=100&flush=true
+--------------------------------------------------
+// CONSOLE
+// TEST[s/^/PUT kimchy\n/]
+
 [float]
 [[forcemerge-multi-index]]
 === Multi Index
@@ -45,7 +59,9 @@ even on `_all` the indices.
 
 [source,js]
 --------------------------------------------------
-$ curl -XPOST 'http://localhost:9200/kimchy,elasticsearch/_forcemerge'
+POST /kimchy,elasticsearch/_forcemerge
 
-$ curl -XPOST 'http://localhost:9200/_forcemerge'
+POST /_forcemerge
 --------------------------------------------------
+// CONSOLE
+// TEST[s/^/PUT kimchy\nPUT elasticsearch\n/]

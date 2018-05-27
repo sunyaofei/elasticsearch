@@ -19,50 +19,68 @@
 
 package org.elasticsearch.index.analysis;
 
+import org.apache.lucene.analysis.BaseTokenStreamTestCase;
+import org.apache.lucene.analysis.Tokenizer;
+import org.apache.lucene.analysis.core.WhitespaceTokenizer;
+import org.apache.lucene.analysis.phonetic.DaitchMokotoffSoundexFilter;
 import org.elasticsearch.Version;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
-import org.elasticsearch.common.inject.Injector;
-import org.elasticsearch.common.inject.ModulesBuilder;
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.settings.SettingsModule;
-import org.elasticsearch.env.Environment;
-import org.elasticsearch.env.EnvironmentModule;
 import org.elasticsearch.index.Index;
-import org.elasticsearch.indices.analysis.AnalysisModule;
 import org.elasticsearch.plugin.analysis.AnalysisPhoneticPlugin;
 import org.elasticsearch.test.ESTestCase;
-import org.elasticsearch.test.IndexSettingsModule;
-import org.elasticsearch.test.InternalSettingsPlugin;
 import org.hamcrest.MatcherAssert;
+import org.junit.Before;
 
 import java.io.IOException;
+import java.io.StringReader;
 
-import static org.elasticsearch.common.settings.Settings.settingsBuilder;
 import static org.hamcrest.Matchers.instanceOf;
 
-/**
- */
 public class SimplePhoneticAnalysisTests extends ESTestCase {
-    public void testPhoneticTokenFilterFactory() throws IOException {
+
+    private TestAnalysis analysis;
+
+    @Before
+    public void setup() throws IOException {
         String yaml = "/org/elasticsearch/index/analysis/phonetic-1.yml";
-        Settings settings = settingsBuilder().loadFromStream(yaml, getClass().getResourceAsStream(yaml))
+        Settings settings = Settings.builder().loadFromStream(yaml, getClass().getResourceAsStream(yaml), false)
                 .put(IndexMetaData.SETTING_VERSION_CREATED, Version.CURRENT)
-                .put(Environment.PATH_HOME_SETTING.getKey(), createTempDir())
                 .build();
-        AnalysisService analysisService = testSimpleConfiguration(settings);
-        TokenFilterFactory filterFactory = analysisService.tokenFilter("phonetic");
+        this.analysis = createTestAnalysis(new Index("test", "_na_"), settings, new AnalysisPhoneticPlugin());
+    }
+
+    public void testPhoneticTokenFilterFactory() throws IOException {
+        TokenFilterFactory filterFactory = analysis.tokenFilter.get("phonetic");
         MatcherAssert.assertThat(filterFactory, instanceOf(PhoneticTokenFilterFactory.class));
     }
 
-    private AnalysisService testSimpleConfiguration(Settings settings) throws IOException {
-        Index index = new Index("test", "_na_");
-        AnalysisModule analysisModule = new AnalysisModule(new Environment(settings));
-        new AnalysisPhoneticPlugin().onModule(analysisModule);
-        SettingsModule settingsModule = new SettingsModule(settings);
-        settingsModule.registerSetting(InternalSettingsPlugin.VERSION_CREATED);
-        Injector parentInjector = new ModulesBuilder().add(settingsModule,
-                new EnvironmentModule(new Environment(settings)), analysisModule)
-                .createInjector();
-        return parentInjector.getInstance(AnalysisRegistry.class).build(IndexSettingsModule.newIndexSettings(index, settings));
+    public void testPhoneticTokenFilterBeiderMorseNoLanguage() throws IOException {
+        TokenFilterFactory filterFactory = analysis.tokenFilter.get("beidermorsefilter");
+        Tokenizer tokenizer = new WhitespaceTokenizer();
+        tokenizer.setReader(new StringReader("ABADIAS"));
+        String[] expected = new String[] { "abYdias", "abYdios", "abadia", "abadiaS", "abadias", "abadio", "abadioS", "abadios", "abodia",
+                "abodiaS", "abodias", "abodio", "abodioS", "abodios", "avadias", "avadios", "avodias", "avodios", "obadia", "obadiaS",
+                "obadias", "obadio", "obadioS", "obadios", "obodia", "obodiaS", "obodias", "obodioS" };
+        BaseTokenStreamTestCase.assertTokenStreamContents(filterFactory.create(tokenizer), expected);
     }
+
+    public void testPhoneticTokenFilterBeiderMorseWithLanguage() throws IOException {
+        TokenFilterFactory filterFactory = analysis.tokenFilter.get("beidermorsefilterfrench");
+        Tokenizer tokenizer = new WhitespaceTokenizer();
+        tokenizer.setReader(new StringReader("Rimbault"));
+        String[] expected = new String[] { "rimbD", "rimbDlt", "rimba", "rimbalt", "rimbo", "rimbolt", "rimbu", "rimbult", "rmbD", "rmbDlt",
+                "rmba", "rmbalt", "rmbo", "rmbolt", "rmbu", "rmbult" };
+        BaseTokenStreamTestCase.assertTokenStreamContents(filterFactory.create(tokenizer), expected);
+    }
+
+    public void testPhoneticTokenFilterDaitchMotokoff() throws IOException {
+        TokenFilterFactory filterFactory = analysis.tokenFilter.get("daitch_mokotoff");
+        Tokenizer tokenizer = new WhitespaceTokenizer();
+        tokenizer.setReader(new StringReader("chauptman"));
+        String[] expected = new String[] { "473660", "573660" };
+        assertThat(filterFactory.create(tokenizer), instanceOf(DaitchMokotoffSoundexFilter.class));
+        BaseTokenStreamTestCase.assertTokenStreamContents(filterFactory.create(tokenizer), expected);
+    }
+
 }

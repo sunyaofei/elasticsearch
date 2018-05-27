@@ -12,6 +12,9 @@ This section describes the following CRUD APIs:
 .Multi-document APIs
 * <<java-docs-multi-get>>
 * <<java-docs-bulk>>
+* <<java-docs-reindex>>
+* <<java-docs-update-by-query>>
+* <<java-docs-delete-by-query>>
 
 NOTE: All CRUD APIs are single-index APIs. The `index` parameter accepts a single
 index name, or an `alias` which points to a single index.
@@ -27,3 +30,7 @@ include::docs/update.asciidoc[]
 include::docs/multi-get.asciidoc[]
 
 include::docs/bulk.asciidoc[]
+
+include::docs/update-by-query.asciidoc[]
+
+include::docs/reindex.asciidoc[]

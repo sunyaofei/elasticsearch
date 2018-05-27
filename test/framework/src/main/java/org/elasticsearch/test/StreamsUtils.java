@@ -19,8 +19,9 @@
 
 package org.elasticsearch.test;
 
-import org.elasticsearch.common.io.Streams;
+import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.io.stream.BytesStreamOutput;
+import org.elasticsearch.core.internal.io.Streams;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -35,7 +36,7 @@ public class StreamsUtils {
         if (is == null) {
             throw new FileNotFoundException("Resource [" + path + "] not found in classpath with class loader [" + classLoader + "]");
         }
-        return Streams.copyToString(new InputStreamReader(is, StandardCharsets.UTF_8));
+        return org.elasticsearch.common.io.Streams.copyToString(new InputStreamReader(is, StandardCharsets.UTF_8));
     }
 
     public static String copyToStringFromClasspath(String path) throws IOException {
@@ -43,7 +44,7 @@ public class StreamsUtils {
         if (is == null) {
             throw new FileNotFoundException("Resource [" + path + "] not found in classpath");
         }
-        return Streams.copyToString(new InputStreamReader(is, StandardCharsets.UTF_8));
+        return org.elasticsearch.common.io.Streams.copyToString(new InputStreamReader(is, StandardCharsets.UTF_8));
     }
 
     public static byte[] copyToBytesFromClasspath(String path) throws IOException {
@@ -53,7 +54,7 @@ public class StreamsUtils {
             }
             try (BytesStreamOutput out = new BytesStreamOutput()) {
                 Streams.copy(is, out);
-                return out.bytes().toBytes();
+                return BytesReference.toBytes(out.bytes());
             }
         }
     }

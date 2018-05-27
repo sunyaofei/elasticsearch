@@ -22,35 +22,55 @@ parser grammar PainlessParser;
 options { tokenVocab=PainlessLexer; }
 
 source
-    : statement+ EOF
+    : function* statement* dstatement? EOF
+    ;
+
+function
+    : decltype ID parameters block
+    ;
+
+parameters
+    : LP ( decltype ID ( COMMA decltype ID )* )? RP
     ;
 
 statement
-    : IF LP expression RP block ( ELSE block )?                                              # if
-    | WHILE LP expression RP ( block | empty )                                               # while
-    | DO block WHILE LP expression RP SEMICOLON?                                             # do
-    | FOR LP initializer? SEMICOLON expression? SEMICOLON afterthought? RP ( block | empty ) # for
-    | declaration SEMICOLON?                                                                 # decl
-    | CONTINUE SEMICOLON?                                                                    # continue
-    | BREAK SEMICOLON?                                                                       # break
-    | RETURN expression SEMICOLON?                                                           # return
-    | TRY block trap+                                                                        # try
-    | THROW expression SEMICOLON?                                                            # throw
-    | expression SEMICOLON?                                                                  # expr
+    : rstatement
+    | dstatement SEMICOLON
+    ;
+
+// Note we use a predicate on the if/else case here to prevent the
+// "dangling-else" ambiguity by forcing the 'else' token to be consumed
+// as soon as one is found.  See (https://en.wikipedia.org/wiki/Dangling_else).
+rstatement
+    : IF LP expression RP trailer ( ELSE trailer | { _input.LA(1) != ELSE }? )                 # if
+    | WHILE LP expression RP ( trailer | empty )                                               # while
+    | FOR LP initializer? SEMICOLON expression? SEMICOLON afterthought? RP ( trailer | empty ) # for
+    | FOR LP decltype ID COLON expression RP trailer                                           # each
+    | FOR LP ID IN expression RP trailer                                                       # ineach
+    | TRY block trap+                                                                          # try
+    ;
+
+dstatement
+    : DO block WHILE LP expression RP # do
+    | declaration                     # decl
+    | CONTINUE                        # continue
+    | BREAK                           # break
+    | RETURN expression               # return
+    | THROW expression                # throw
+    | expression                      # expr
+    ;
+
+trailer
+    : block
+    | statement
     ;
 
 block
-    : LBRACK statement+ RBRACK                 # multiple
-    | statement                                # single
+    : LBRACK statement* dstatement? RBRACK
     ;
 
 empty
-    : emptyscope
-    | SEMICOLON
-    ;
-
-emptyscope
-    : LBRACK RBRACK
+    : SEMICOLON
     ;
 
 initializer
@@ -63,7 +83,7 @@ afterthought
     ;
 
 declaration
-    : decltype declvar ( COMMA declvar )*
+    : decltype declvar (COMMA declvar)*
     ;
 
 decltype
@@ -75,62 +95,122 @@ declvar
     ;
 
 trap
-    : CATCH LP ( TYPE ID ) RP ( block | emptyscope )
+    : CATCH LP TYPE ID RP block
     ;
 
 expression
-    :               LP expression RP                                    # precedence
-    |               ( OCTAL | HEX | INTEGER | DECIMAL )                 # numeric
-    |               CHAR                                                # char
-    |               TRUE                                                # true
-    |               FALSE                                               # false
-    |               NULL                                                # null
-    | <assoc=right> extstart increment                                  # postinc
-    | <assoc=right> increment extstart                                  # preinc
-    |               extstart                                            # external
-    | <assoc=right> ( BOOLNOT | BWNOT | ADD | SUB ) expression          # unary
-    | <assoc=right> LP decltype RP expression                           # cast
-    |               expression ( MUL | DIV | REM ) expression           # binary
-    |               expression ( ADD | SUB ) expression                 # binary
-    |               expression ( LSH | RSH | USH ) expression           # binary
-    |               expression ( LT | LTE | GT | GTE ) expression       # comp
-    |               expression ( EQ | EQR | NE | NER ) expression       # comp
-    |               expression BWAND expression                         # binary
-    |               expression BWXOR expression                         # binary
-    |               expression BWOR expression                          # binary
-    |               expression BOOLAND expression                       # bool
-    |               expression BOOLOR expression                        # bool
-    | <assoc=right> expression COND expression COLON expression         # conditional
-    | <assoc=right> extstart ( ASSIGN | AADD | ASUB | AMUL | ADIV
-                                      | AREM | AAND | AXOR | AOR
-                                      | ALSH | ARSH | AUSH ) expression # assignment
+    :               unary                                                 # single
+    |               expression ( MUL | DIV | REM ) expression             # binary
+    |               expression ( ADD | SUB ) expression                   # binary
+    |               expression ( FIND | MATCH ) expression                # binary
+    |               expression ( LSH | RSH | USH ) expression             # binary
+    |               expression ( LT | LTE | GT | GTE ) expression         # comp
+    |               expression INSTANCEOF decltype                        # instanceof
+    |               expression ( EQ | EQR | NE | NER ) expression         # comp
+    |               expression BWAND expression                           # binary
+    |               expression XOR expression                             # binary
+    |               expression BWOR expression                            # binary
+    |               expression BOOLAND expression                         # bool
+    |               expression BOOLOR expression                          # bool
+    | <assoc=right> expression COND expression COLON expression           # conditional
+    | <assoc=right> expression ELVIS expression                           # elvis
+    | <assoc=right> expression ( ASSIGN | AADD | ASUB | AMUL |
+                                 ADIV   | AREM | AAND | AXOR |
+                                 AOR    | ALSH | ARSH | AUSH ) expression # assignment
     ;
 
-extstart
-    : extprec
-    | extcast
-    | exttype
-    | extvar
-    | extnew
-    | extstring
+unary
+    :  ( INCR | DECR ) chain                 # pre
+    |  chain (INCR | DECR )                  # post
+    |  chain                                 # read
+    |  ( BOOLNOT | BWNOT | ADD | SUB ) unary # operator
+    |  LP decltype RP unary                  # cast
     ;
 
-extprec:   LP ( extprec | extcast | exttype | extvar | extnew | extstring ) RP ( extdot | extbrace )?;
-extcast:   LP decltype RP ( extprec | extcast | exttype | extvar | extnew | extstring );
-extbrace:  LBRACE expression RBRACE ( extdot | extbrace )?;
-extdot:    DOT ( extcall | extfield );
-exttype:   TYPE extdot;
-extcall:   EXTID arguments ( extdot | extbrace )?;
-extvar:    ID ( extdot | extbrace )?;
-extfield:  ( EXTID | EXTINTEGER ) ( extdot | extbrace )?;
-extnew:    NEW TYPE ( ( arguments ( extdot | extbrace)? ) | ( ( LBRACE expression RBRACE )+ extdot? ) );
-extstring: STRING (extdot | extbrace )?;
+chain
+    : primary postfix*          # dynamic
+    | decltype postdot postfix* # static
+    | arrayinitializer          # newarray
+    ;
+
+primary
+    : LP expression RP                    # precedence
+    | ( OCTAL | HEX | INTEGER | DECIMAL ) # numeric
+    | TRUE                                # true
+    | FALSE                               # false
+    | NULL                                # null
+    | STRING                              # string
+    | REGEX                               # regex
+    | listinitializer                     # listinit
+    | mapinitializer                      # mapinit
+    | ID                                  # variable
+    | ID arguments                        # calllocal
+    | NEW TYPE arguments                  # newobject
+    ;
+
+postfix
+    : callinvoke
+    | fieldaccess
+    | braceaccess
+    ;
+
+postdot
+    : callinvoke
+    | fieldaccess
+    ;
+
+callinvoke
+    : ( DOT | NSDOT ) DOTID arguments
+    ;
+
+fieldaccess
+    : ( DOT | NSDOT ) ( DOTID | DOTINTEGER )
+    ;
+
+braceaccess
+    : LBRACE expression RBRACE
+    ;
+
+arrayinitializer
+    : NEW TYPE ( LBRACE expression RBRACE )+ ( postdot postfix* )?                        # newstandardarray
+    | NEW TYPE LBRACE RBRACE LBRACK ( expression ( COMMA expression )* )? RBRACK postfix* # newinitializedarray
+    ;
+
+listinitializer
+    : LBRACE expression ( COMMA expression)* RBRACE
+    | LBRACE RBRACE
+    ;
+
+mapinitializer
+    : LBRACE maptoken ( COMMA maptoken )* RBRACE
+    | LBRACE COLON RBRACE
+    ;
+
+maptoken
+    : expression COLON expression
+    ;
 
 arguments
-    : ( LP ( expression ( COMMA expression )* )? RP )
+    : ( LP ( argument ( COMMA argument )* )? RP )
     ;
 
-increment
-    : INCR
-    | DECR
+argument
+    : expression
+    | lambda
+    | funcref
+    ;
+
+lambda
+    : ( lamtype | LP ( lamtype ( COMMA lamtype )* )? RP ) ARROW ( block | expression )
+    ;
+
+lamtype
+    : decltype? ID
+    ;
+
+funcref
+    : TYPE REF ID      # classfuncref
+    | decltype REF NEW # constructorfuncref
+    | ID REF ID        # capturingfuncref
+    | THIS REF ID      # localfuncref
     ;

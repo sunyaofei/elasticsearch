@@ -1,19 +1,32 @@
 [[elasticsearch-reference]]
 = Elasticsearch Reference
 
-:version:       3.0.0-beta1
-:major-version: 3.x
-:branch:        master
-:jdk:           1.8.0_25
-:defguide:      https://www.elastic.co/guide/en/elasticsearch/guide/current
-:plugins:       https://www.elastic.co/guide/en/elasticsearch/plugins/master
-:javaclient:    https://www.elastic.co/guide/en/elasticsearch/client/java-api/master/
-:issue:         https://github.com/elastic/elasticsearch/issues/
-:pull:          https://github.com/elastic/elasticsearch/pull/
+:include-xpack:         true
+:es-test-dir:           {docdir}/../src/test
+:plugins-examples-dir:  {docdir}/../../plugins/examples
+:xes-repo-dir:          {docdir}/../../x-pack/docs/{lang}
+:es-repo-dir:           {docdir}
+
+
+include::../Versions.asciidoc[]
 
 include::getting-started.asciidoc[]
 
 include::setup.asciidoc[]
+
+include::{xes-repo-dir}/setup/setup-xes.asciidoc[]
+
+include::{xes-repo-dir}/monitoring/configuring-monitoring.asciidoc[]
+
+include::{xes-repo-dir}/security/configuring-es.asciidoc[]
+
+include::{xes-repo-dir}/setup/setup-xclient.asciidoc[]
+
+include::{xes-repo-dir}/settings/configuring-xes.asciidoc[]
+
+include::{xes-repo-dir}/setup/bootstrap-checks-xes.asciidoc[]
+
+include::upgrade.asciidoc[]
 
 include::migration/index.asciidoc[]
 
@@ -43,16 +56,24 @@ include::index-modules.asciidoc[]
 
 include::ingest.asciidoc[]
 
+include::{xes-repo-dir}/sql/index.asciidoc[]
+
+include::{xes-repo-dir}/monitoring/index.asciidoc[]
+
+include::{xes-repo-dir}/rollup/index.asciidoc[]
+
+include::{xes-repo-dir}/rest-api/index.asciidoc[]
+
+include::{xes-repo-dir}/commands/index.asciidoc[]
+
+include::how-to.asciidoc[]
+
 include::testing.asciidoc[]
 
 include::glossary.asciidoc[]
 
-//////////////////////////////////////////
-  include::release-notes.asciidoc[]
-//////////////////////////////////////////
+include::release-notes/highlights.asciidoc[]
+
+include::release-notes.asciidoc[]
 
 include::redirects.asciidoc[]
-
-
-
-

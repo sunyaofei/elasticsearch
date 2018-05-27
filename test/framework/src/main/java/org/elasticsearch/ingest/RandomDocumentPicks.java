@@ -19,11 +19,10 @@
 
 package org.elasticsearch.ingest;
 
-import com.carrotsearch.randomizedtesting.generators.RandomInts;
+import com.carrotsearch.randomizedtesting.generators.RandomNumbers;
 import com.carrotsearch.randomizedtesting.generators.RandomPicks;
 import com.carrotsearch.randomizedtesting.generators.RandomStrings;
-import org.elasticsearch.common.Strings;
-import org.elasticsearch.ingest.core.IngestDocument;
+import org.elasticsearch.index.VersionType;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,26 +42,27 @@ public final class RandomDocumentPicks {
      * path to refer to a field name using the dot notation.
      */
     public static String randomFieldName(Random random) {
-        int numLevels = RandomInts.randomIntBetween(random, 1, 5);
-        String fieldName = "";
-        for (int i = 0; i < numLevels; i++) {
+        int numLevels = RandomNumbers.randomIntBetween(random, 1, 5);
+        StringBuilder fieldName = new StringBuilder();
+        for (int i = 0; i < numLevels-1; i++) {
             if (i > 0) {
-                fieldName += ".";
+                fieldName.append('.');
             }
-            fieldName += randomString(random);
+            fieldName.append(randomString(random));
         }
-        return fieldName;
+        if (numLevels > 1) {
+            fieldName.append('.');
+        }
+        fieldName.append(randomLeafFieldName(random));
+        return fieldName.toString();
     }
 
     /**
      * Returns a random leaf field name.
      */
     public static String randomLeafFieldName(Random random) {
-        String fieldName;
-        do {
-            fieldName = randomString(random);
-        } while (fieldName.contains("."));
-        return fieldName;
+        // Never generates a dot:
+        return RandomStrings.randomAsciiAlphanumOfLengthBetween(random, 1, 10);
     }
 
     /**
@@ -104,7 +104,7 @@ public final class RandomDocumentPicks {
      * that each node of the tree either doesn't exist or is a map, otherwise new fields cannot be added.
      */
     public static boolean canAddField(String path, IngestDocument ingestDocument) {
-        String[] pathElements = Strings.splitStringToArray(path, '.');
+        String[] pathElements = path.split("\\.");
         Map<String, Object> innerMap = ingestDocument.getSourceAndMetadata();
         if (pathElements.length > 1) {
             for (int i = 0; i < pathElements.length - 1; i++) {
@@ -139,22 +139,13 @@ public final class RandomDocumentPicks {
         String type = randomString(random);
         String id = randomString(random);
         String routing = null;
+        Long version = randomNonNegtiveLong(random);
+        VersionType versionType = RandomPicks.randomFrom(random,
+            new VersionType[]{VersionType.INTERNAL, VersionType.EXTERNAL, VersionType.EXTERNAL_GTE});
         if (random.nextBoolean()) {
             routing = randomString(random);
         }
-        String parent = null;
-        if (random.nextBoolean()) {
-            parent = randomString(random);
-        }
-        String timestamp = null;
-        if (random.nextBoolean()) {
-            timestamp = randomString(random);
-        }
-        String ttl = null;
-        if (random.nextBoolean()) {
-            ttl = randomString(random);
-        }
-        return new IngestDocument(index, type, id, routing, parent, timestamp, ttl, source);
+        return new IngestDocument(index, type, id, routing, version, versionType, source);
     }
 
     public static Map<String, Object> randomSource(Random random) {
@@ -171,7 +162,7 @@ public final class RandomDocumentPicks {
     }
 
     private static Object randomFieldValue(Random random, int currentDepth) {
-        switch(RandomInts.randomIntBetween(random, 0, 8)) {
+        switch(RandomNumbers.randomIntBetween(random, 0, 9)) {
             case 0:
                 return randomString(random);
             case 1:
@@ -182,28 +173,28 @@ public final class RandomDocumentPicks {
                 return random.nextDouble();
             case 4:
                 List<String> stringList = new ArrayList<>();
-                int numStringItems = RandomInts.randomIntBetween(random, 1, 10);
+                int numStringItems = RandomNumbers.randomIntBetween(random, 1, 10);
                 for (int j = 0; j < numStringItems; j++) {
                     stringList.add(randomString(random));
                 }
                 return stringList;
             case 5:
                 List<Integer> intList = new ArrayList<>();
-                int numIntItems = RandomInts.randomIntBetween(random, 1, 10);
+                int numIntItems = RandomNumbers.randomIntBetween(random, 1, 10);
                 for (int j = 0; j < numIntItems; j++) {
                     intList.add(random.nextInt());
                 }
                 return intList;
             case 6:
                 List<Boolean> booleanList = new ArrayList<>();
-                int numBooleanItems = RandomInts.randomIntBetween(random, 1, 10);
+                int numBooleanItems = RandomNumbers.randomIntBetween(random, 1, 10);
                 for (int j = 0; j < numBooleanItems; j++) {
                     booleanList.add(random.nextBoolean());
                 }
                 return booleanList;
             case 7:
                 List<Double> doubleList = new ArrayList<>();
-                int numDoubleItems = RandomInts.randomIntBetween(random, 1, 10);
+                int numDoubleItems = RandomNumbers.randomIntBetween(random, 1, 10);
                 for (int j = 0; j < numDoubleItems; j++) {
                     doubleList.add(random.nextDouble());
                 }
@@ -212,6 +203,10 @@ public final class RandomDocumentPicks {
                 Map<String, Object> newNode = new HashMap<>();
                 addRandomFields(random, newNode, ++currentDepth);
                 return newNode;
+            case 9:
+                byte[] byteArray = new byte[RandomNumbers.randomIntBetween(random, 1, 1024)];
+                random.nextBytes(byteArray);
+                return byteArray;
             default:
                 throw new UnsupportedOperationException();
         }
@@ -224,11 +219,16 @@ public final class RandomDocumentPicks {
         return RandomStrings.randomUnicodeOfCodepointLengthBetween(random, 1, 10);
     }
 
+    private static Long randomNonNegtiveLong(Random random) {
+        long randomLong = random.nextLong();
+        return randomLong == Long.MIN_VALUE ? 0 : Math.abs(randomLong);
+    }
+
     private static void addRandomFields(Random random, Map<String, Object> parentNode, int currentDepth) {
         if (currentDepth > 5) {
             return;
         }
-        int numFields = RandomInts.randomIntBetween(random, 1, 10);
+        int numFields = RandomNumbers.randomIntBetween(random, 1, 10);
         for (int i = 0; i < numFields; i++) {
             String fieldName = randomLeafFieldName(random);
             Object fieldValue = randomFieldValue(random, currentDepth);

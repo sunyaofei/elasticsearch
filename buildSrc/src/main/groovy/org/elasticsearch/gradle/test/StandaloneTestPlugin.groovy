@@ -24,13 +24,17 @@ import org.elasticsearch.gradle.BuildPlugin
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaBasePlugin
+import org.gradle.api.tasks.compile.JavaCompile
 
-/** A plugin to add tests only. Used for QA tests that run arbitrary unit tests. */
+/**
+ * Configures the build to compile against Elasticsearch's test framework and
+ * run integration and unit tests. Use BuildPlugin if you want to build main
+ * code as well as tests. */
 public class StandaloneTestPlugin implements Plugin<Project> {
 
     @Override
     public void apply(Project project) {
-        project.pluginManager.apply(StandaloneTestBasePlugin)
+        project.pluginManager.apply(StandaloneRestTestPlugin)
 
         Map testOptions = [
             name: 'test',
@@ -46,5 +50,12 @@ public class StandaloneTestPlugin implements Plugin<Project> {
         test.testClassesDir project.sourceSets.test.output.classesDir
         test.mustRunAfter(project.precommit)
         project.check.dependsOn(test)
+
+        project.tasks.withType(JavaCompile) {
+            // This will be the default in Gradle 5.0
+            if (options.compilerArgs.contains("-processor") == false) {
+                options.compilerArgs << '-proc:none'
+            }
+        }
     }
 }

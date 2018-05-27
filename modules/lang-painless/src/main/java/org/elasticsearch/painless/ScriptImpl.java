@@ -19,24 +19,27 @@
 
 package org.elasticsearch.painless;
 
-import org.apache.lucene.search.Scorer;
+import org.apache.lucene.index.LeafReaderContext;
 import org.elasticsearch.script.ExecutableScript;
-import org.elasticsearch.script.LeafSearchScript;
-import org.elasticsearch.script.ScoreAccessor;
+import org.elasticsearch.script.SearchScript;
 import org.elasticsearch.search.lookup.LeafSearchLookup;
+import org.elasticsearch.search.lookup.SearchLookup;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.DoubleSupplier;
+import java.util.function.Function;
 
 /**
- * ScriptImpl can be used as either an {@link ExecutableScript} or a {@link LeafSearchScript}
+ * ScriptImpl can be used as either an {@link ExecutableScript} or a {@link SearchScript}
  * to run a previously compiled Painless script.
  */
-final class ScriptImpl implements ExecutableScript, LeafSearchScript {
+final class ScriptImpl extends SearchScript {
+
     /**
-     * The Painless Executable script that can be run.
+     * The Painless script that can be run.
      */
-    private final Executable executable;
+    private final GenericElasticsearchScript script;
 
     /**
      * A map that can be used to access input parameters at run-time.
@@ -44,104 +47,71 @@ final class ScriptImpl implements ExecutableScript, LeafSearchScript {
     private final Map<String, Object> variables;
 
     /**
-     * The lookup is used to access search field values at run-time.
+     * Looks up the {@code _score} from {@link #scorer} if {@code _score} is used, otherwise returns {@code 0.0}.
      */
-    private final LeafSearchLookup lookup;
+    private final DoubleSupplier scoreLookup;
+
+    /**
+     * Looks up the {@code ctx} from the {@link #variables} if {@code ctx} is used, otherwise return {@code null}.
+     */
+    private final Function<Map<String, Object>, Map<?, ?>> ctxLookup;
+
+    /**
+     * Current _value for aggregation
+     * @see #setNextAggregationValue(Object)
+     */
+    private Object aggregationValue;
 
     /**
      * Creates a ScriptImpl for the a previously compiled Painless script.
-     * @param executable The previously compiled Painless script.
+     * @param script The previously compiled Painless script.
      * @param vars The initial variables to run the script with.
      * @param lookup The lookup to allow search fields to be available if this is run as a search script.
      */
-    ScriptImpl(final Executable executable, final Map<String, Object> vars, final LeafSearchLookup lookup) {
-        this.executable = executable;
-        this.lookup = lookup;
+    ScriptImpl(GenericElasticsearchScript script, Map<String, Object> vars, SearchLookup lookup, LeafReaderContext leafContext) {
+        super(null, lookup, leafContext);
+        this.script = script;
         this.variables = new HashMap<>();
 
         if (vars != null) {
             variables.putAll(vars);
         }
-
-        if (lookup != null) {
-            variables.putAll(lookup.asMap());
+        LeafSearchLookup leafLookup = getLeafLookup();
+        if (leafLookup != null) {
+            variables.putAll(leafLookup.asMap());
         }
+
+        scoreLookup = script.needs_score() ? this::getScore : () -> 0.0;
+        ctxLookup = script.needsCtx() ? variables -> (Map<?, ?>) variables.get("ctx") : variables -> null;
     }
 
-    /**
-     * Set a variable for the script to be run against.
-     * @param name The variable name.
-     * @param value The variable value.
-     */
+    @Override
+    public Map<String, Object> getParams() {
+        return variables;
+    }
+
     @Override
     public void setNextVar(final String name, final Object value) {
         variables.put(name, value);
     }
 
-    /**
-     * Run the script.
-     * @return The script result.
-     */
     @Override
-    public Object run() {
-        return executable.execute(variables);
+    public void setNextAggregationValue(Object value) {
+        this.aggregationValue = value;
     }
 
-    /**
-     * Run the script.
-     * @return The script result as a double.
-     */
+    @Override
+    public Object run() {
+        return script.execute(variables, scoreLookup.getAsDouble(), getDoc(), aggregationValue, ctxLookup.apply(variables));
+    }
+
     @Override
     public double runAsDouble() {
         return ((Number)run()).doubleValue();
     }
 
-    /**
-     * Run the script.
-     * @return The script result as a float.
-     */
-    @Override
-    public float runAsFloat() {
-        return ((Number)run()).floatValue();
-    }
-
-    /**
-     * Run the script.
-     * @return The script result as a long.
-     */
     @Override
     public long runAsLong() {
         return ((Number)run()).longValue();
-    }
-
-    /**
-     * Sets the scorer to be accessible within a script.
-     * @param scorer The scorer used for a search.
-     */
-    @Override
-    public void setScorer(final Scorer scorer) {
-        variables.put("#score", new ScoreAccessor(scorer));
-    }
-
-    /**
-     * Sets the current document.
-     * @param doc The current document.
-     */
-    @Override
-    public void setDocument(final int doc) {
-        if (lookup != null) {
-            lookup.setDocument(doc);
-        }
-    }
-
-    /**
-     * Sets the current source.
-     * @param source The current source.
-     */
-    @Override
-    public void setSource(final Map<String, Object> source) {
-        if (lookup != null) {
-            lookup.source().setSource(source);
-        }
     }
 }

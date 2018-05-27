@@ -12,7 +12,6 @@ For instance:
 
 * Strings will be coerced to numbers.
 * Floating points will be truncated for integer values.
-* Lon/lat geo-points will be normalized to a standard -180:180 / -90:90 coordinate system.
 
 For instance:
 
@@ -21,7 +20,7 @@ For instance:
 PUT my_index
 {
   "mappings": {
-    "my_type": {
+    "_doc": {
       "properties": {
         "number_one": {
           "type": "integer"
@@ -35,17 +34,18 @@ PUT my_index
   }
 }
 
-PUT my_index/my_type/1
+PUT my_index/_doc/1
 {
   "number_one": "10" <1>
 }
 
-PUT my_index/my_type/2
+PUT my_index/_doc/2
 {
   "number_two": "10" <2>
 }
 --------------------------------------------------
-// AUTOSENSE
+// CONSOLE
+// TEST[catch:bad_request]
 <1> The `number_one` field will contain the integer `10`.
 <2> This document will be rejected because coercion is disabled.
 
@@ -67,27 +67,27 @@ PUT my_index
     "index.mapping.coerce": false
   },
   "mappings": {
-    "my_type": {
+    "_doc": {
       "properties": {
         "number_one": {
-          "type": "integer"
-        },
-        "number_two": {
           "type": "integer",
           "coerce": true
+        },
+        "number_two": {
+          "type": "integer"
         }
       }
     }
   }
 }
 
-PUT my_index/my_type/1
+PUT my_index/_doc/1
 { "number_one": "10" } <1>
 
-PUT my_index/my_type/2
+PUT my_index/_doc/2
 { "number_two": "10" } <2>
 --------------------------------------------------
-// AUTOSENSE
-<1> This document will be rejected because the `number_one` field inherits the index-level coercion setting.
-<2> The `number_two` field overrides the index level setting to enable coercion.
-
+// CONSOLE
+// TEST[catch:bad_request]
+<1> The `number_one` field overrides the index level setting to enable coercion.
+<2> This document will be rejected because the `number_two` field inherits the index-level coercion setting.

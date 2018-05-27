@@ -19,16 +19,20 @@
 
 lexer grammar PainlessLexer;
 
-@header {
-    import java.util.Set;
-}
+@members{
+/**
+ * Check against the current whitelist to determine whether a token is a type
+ * or not. Called by the {@code TYPE} token defined in {@code PainlessLexer.g4}.
+ * See also
+ * <a href="https://en.wikipedia.org/wiki/The_lexer_hack">The lexer hack</a>.
+ */
+protected abstract boolean isSimpleType(String name);
 
-@members {
-    private Set<String> types = null;
-
-    void setTypes(Set<String> types) {
-        this.types = types;
-    }
+/**
+ * Is the preceding {@code /} a the beginning of a regex (true) or a division
+ * (false).
+ */
+protected abstract boolean slashIsRegex();
 }
 
 WS: [ \t\n\r]+ -> skip;
@@ -40,10 +44,16 @@ LBRACE:    '[';
 RBRACE:    ']';
 LP:        '(';
 RP:        ')';
-DOT:       '.' -> mode(EXT);
+// We switch modes after a dot to ensure there are not conflicts
+// between shortcuts and decimal values.  Without the mode switch
+// shortcuts such as id.0.0 will fail because 0.0 will be interpreted
+// as a decimal value instead of two individual list-style shortcuts.
+DOT:       '.'  -> mode(AFTER_DOT);
+NSDOT:     '?.' -> mode(AFTER_DOT);
 COMMA:     ',';
 SEMICOLON: ';';
 IF:        'if';
+IN:        'in';
 ELSE:      'else';
 WHILE:     'while';
 DO:        'do';
@@ -55,11 +65,13 @@ NEW:       'new';
 TRY:       'try';
 CATCH:     'catch';
 THROW:     'throw';
+THIS:      'this';
+INSTANCEOF: 'instanceof';
 
 BOOLNOT: '!';
 BWNOT:   '~';
 MUL:     '*';
-DIV:     '/';
+DIV:     '/' { false == slashIsRegex() }?;
 REM:     '%';
 ADD:     '+';
 SUB:     '-';
@@ -75,12 +87,17 @@ EQR:     '===';
 NE:      '!=';
 NER:     '!==';
 BWAND:   '&';
-BWXOR:   '^';
+XOR:     '^';
 BWOR:    '|';
 BOOLAND: '&&';
 BOOLOR:  '||';
 COND:    '?';
 COLON:   ':';
+ELVIS:   '?:';
+REF:     '::';
+ARROW:   '->';
+FIND:    '=~';
+MATCH:   '==~';
 INCR:    '++';
 DECR:    '--';
 
@@ -100,20 +117,26 @@ AUSH:   '>>>=';
 OCTAL: '0' [0-7]+ [lL]?;
 HEX: '0' [xX] [0-9a-fA-F]+ [lL]?;
 INTEGER: ( '0' | [1-9] [0-9]* ) [lLfFdD]?;
-DECIMAL: ( '0' | [1-9] [0-9]* ) DOT [0-9]* ( [eE] [+\-]? [0-9]+ )? [fF]?;
+DECIMAL: ( '0' | [1-9] [0-9]* ) (DOT [0-9]+)? ( [eE] [+\-]? [0-9]+ )? [fFdD]?;
 
-STRING: '"' ( '\\"' | '\\\\' | ~[\\"] )*? '"' {setText(getText().substring(1, getText().length() - 1));};
-CHAR: '\'' . '\''                             {setText(getText().substring(1, getText().length() - 1));};
+STRING: ( '"' ( '\\"' | '\\\\' | ~[\\"] )*? '"' ) | ( '\'' ( '\\\'' | '\\\\' | ~[\\'] )*? '\'' );
+REGEX: '/' ( '\\' ~'\n' | ~('/' | '\n') )+? '/' [cilmsUux]* { slashIsRegex() }?;
 
 TRUE:  'true';
 FALSE: 'false';
 
 NULL: 'null';
 
-TYPE: ID GENERIC? {types.contains(getText().replace(" ", ""))}? {setText(getText().replace(" ", ""));};
-fragment GENERIC: ' '* '<' ' '* ( ID GENERIC? ) ' '* ( COMMA ' '* ( ID GENERIC? ) ' '* )* '>';
+// The predicate here allows us to remove ambiguities when
+// dealing with types versus identifiers.  We check against
+// the current whitelist to determine whether a token is a type
+// or not.  Note this works by processing one character at a time
+// and the rule is added or removed as this happens.  This is also known
+// as "the lexer hack."  See (https://en.wikipedia.org/wiki/The_lexer_hack).
+TYPE: ID ( DOT ID )* { isSimpleType(getText()) }?;
 ID: [_a-zA-Z] [_a-zA-Z0-9]*;
 
-mode EXT;
-EXTINTEGER: ( '0' | [1-9] [0-9]* ) -> mode(DEFAULT_MODE);
-EXTID: [_a-zA-Z] [_a-zA-Z0-9]* -> mode(DEFAULT_MODE);
+mode AFTER_DOT;
+
+DOTINTEGER: ( '0' | [1-9] [0-9]* )                        -> mode(DEFAULT_MODE);
+DOTID: [_a-zA-Z] [_a-zA-Z0-9]*                            -> mode(DEFAULT_MODE);

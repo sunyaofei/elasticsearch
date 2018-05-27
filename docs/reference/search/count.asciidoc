@@ -10,33 +10,41 @@ body. Here is an example:
 
 [source,js]
 --------------------------------------------------
-$ curl -XGET 'http://localhost:9200/twitter/tweet/_count?q=user:kimchy'
+PUT /twitter/_doc/1?refresh
+{
+    "user": "kimchy"
+}
 
-$ curl -XGET 'http://localhost:9200/twitter/tweet/_count' -d '
+GET /twitter/_doc/_count?q=user:kimchy
+
+GET /twitter/_doc/_count
 {
     "query" : {
         "term" : { "user" : "kimchy" }
     }
-}'
+}
 --------------------------------------------------
+//CONSOLE
 
 NOTE: The query being sent in the body must be nested in a `query` key, same as
 the <<search-search,search api>> works
 
 Both examples above do the same thing, which is count the number of
-tweets from the twitter index for a certain user. The result is:
+tweets from the `twitter` index for a certain user. The result is:
 
 [source,js]
 --------------------------------------------------
 {
     "count" : 1,
     "_shards" : {
-        "total" : 5,
-        "successful" : 5,
+        "total" : 1,
+        "successful" : 1,
+        "skipped" : 0,
         "failed" : 0
     }
 }
 --------------------------------------------------
+// TESTRESPONSE
 
 The query is optional, and when not provided, it will use `match_all` to
 count all the docs.
@@ -66,9 +74,6 @@ query.
 
 |`lenient` |If set to true will cause format based failures (like
 providing text to a numeric field) to be ignored. Defaults to false.
-
-|`lowercase_expanded_terms` |Should terms be automatically lowercased or
-not. Defaults to `true`.
 
 |`analyze_wildcard` |Should wildcard and prefix queries be analyzed or
 not. Defaults to `false`.

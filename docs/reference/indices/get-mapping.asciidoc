@@ -6,8 +6,10 @@ index/type.
 
 [source,js]
 --------------------------------------------------
-curl -XGET 'http://localhost:9200/twitter/_mapping/tweet'
+GET /twitter/_mapping/_doc
 --------------------------------------------------
+// CONSOLE
+// TEST[setup:twitter]
 
 [float]
 === Multiple Indices and Types
@@ -21,17 +23,66 @@ following are some examples:
 
 [source,js]
 --------------------------------------------------
-curl -XGET 'http://localhost:9200/_mapping/twitter,kimchy'
+GET /_mapping/_doc
 
-curl -XGET 'http://localhost:9200/_all/_mapping/tweet,book'
+GET /_all/_mapping/_doc
 --------------------------------------------------
+// CONSOLE
+// TEST[setup:twitter]
 
 If you want to get mappings of all indices and types then the following
 two examples are equivalent:
 
 [source,js]
 --------------------------------------------------
-curl -XGET 'http://localhost:9200/_all/_mapping'
+GET /_all/_mapping
 
-curl -XGET 'http://localhost:9200/_mapping'
+GET /_mapping
 --------------------------------------------------
+// CONSOLE
+// TEST[setup:twitter]
+
+[float]
+=== Skipping types
+
+Types are scheduled to be fully removed in Elasticsearch 8.0 and will not appear
+in requests or responses anymore. You can opt in for this future behaviour by
+setting `include_type_name=false` in the request, which will return mappings
+directly under `mappings` without keying by the type name.
+
+Here is an example:
+
+[source,js]
+--------------------------------------------------
+PUT test?include_type_name=false
+{
+  "mappings": {
+    "properties": {
+      "foo": {
+        "type": "keyword"
+      }
+    }
+  }
+}
+
+GET test/_mappings?include_type_name=false
+--------------------------------------------------
+// CONSOLE
+
+which returns
+
+[source,js]
+--------------------------------------------------
+{
+  "test": {
+    "mappings": {
+      "properties": {
+        "foo": {
+          "type": "keyword"
+        }
+      }
+    }
+  }
+}
+--------------------------------------------------
+// TESTRESPONSE

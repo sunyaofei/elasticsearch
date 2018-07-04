@@ -1,0 +1,25 @@
+PublishingPlugin.PUBLISH_TASK_GROUP = "publishing"
+PublishingPlugin.PUBLISH_LIFECYCLE_TASK_NAME = "publish"
+
+
+
+MavenPublication
+
+
+
+NamingConventionsTask
+
+
+非直接依赖
+https://stackoverflow.com/questions/41725810/what-is-a-transitive-maven-dependency
+
+强大的
+ExtensionAware
+
+https://stackoverflow.com/questions/12302107/javac-fork-mode
+Forking allows javac to run as external process in its own heap space thus limits the memory leak to external process without affecting the parent java process.
+
+Check the thread below which tells other options to be used along with 'fork' if you are using 'javac' Ant task.
+
+
+javac -help -X

@@ -17,9 +17,10 @@
  * under the License.
  */
 
-import java.nio.file.Files
 
-import org.gradle.util.GradleVersion
+import org.elasticsearch.gradle.precommit.NamingConventionsTask
+
+import java.nio.file.Files
 
 apply plugin: 'groovy'
 
@@ -69,6 +70,7 @@ task writeVersionProperties {
   }
 }
 
+////gradle构建过程中的默认任务processResources
 processResources {
   dependsOn writeVersionProperties
   from tempPropertiesFile
@@ -163,7 +165,7 @@ if (project != rootProject) {
     integTestClass = 'org.elasticsearch.test.NamingConventionsCheckBadClasses$IntegTestCase'
   }
 
-  task namingConventionsMain(type: org.elasticsearch.gradle.precommit.NamingConventionsTask) {
+  task namingConventionsMain(type: NamingConventionsTask) {
     checkForTestsInMain = true
     testClass = namingConventions.testClass
     integTestClass = namingConventions.integTestClass

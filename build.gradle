@@ -121,11 +121,6 @@ allprojects {
     }
 }
 
-
-task hello << {
-    println("hello es")
-}
-
 task verifyVersions {
     doLast {
         if (gradle.startParameter.isOffline()) {
@@ -560,4 +555,8 @@ gradle.projectsEvaluated {
             }
         }
     }
+}
+
+task hello << {
+    println("hello es")
 }

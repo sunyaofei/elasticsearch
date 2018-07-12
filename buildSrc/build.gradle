@@ -18,8 +18,6 @@
  */
 
 
-import org.elasticsearch.gradle.precommit.NamingConventionsTask
-
 import java.nio.file.Files
 
 apply plugin: 'groovy'
@@ -165,10 +163,10 @@ if (project != rootProject) {
     integTestClass = 'org.elasticsearch.test.NamingConventionsCheckBadClasses$IntegTestCase'
   }
 
-  task namingConventionsMain(type: NamingConventionsTask) {
-    checkForTestsInMain = true
-    testClass = namingConventions.testClass
-    integTestClass = namingConventions.integTestClass
-  }
-  precommit.dependsOn namingConventionsMain
+//  task namingConventionsMain(type: NamingConventionsTask) {
+//    checkForTestsInMain = true
+//    testClass = namingConventions.testClass
+//    integTestClass = namingConventions.integTestClass
+//  }
+//  precommit.dependsOn namingConventionsMain
 }

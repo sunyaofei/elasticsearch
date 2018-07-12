@@ -410,7 +410,7 @@ class BuildPlugin implements Plugin<Project> {
                 // see https://discuss.gradle.org/t/maven-publish-plugin-generated-pom-making-dependency-scope-runtime/7494/4
                 boolean isCompileDep = project.configurations.compile.allDependencies.find { dep ->
                     dep.name == depNode.artifactId.text()
-                    println(dep.name)
+                    println "baby" + dep.name
                 }
                 if (depNode.scope.text() == 'runtime' && isCompileDep) {
                     depNode.scope*.value = 'compile'

@@ -38,3 +38,110 @@ https://www.cnblogs.com/ucarinc/p/8073066.html
 
 To run an instance of elasticsearch from the source code run ./gradlew run
 
+bin/elasticsearch config/elasticsearch.yml
+starts elasticsearch
+
+Option                Description
+------                -----------
+-E <KeyValuePair>     Configure a setting
+-V, --version         Prints elasticsearch version information and exits
+-d, --daemonize       Starts Elasticsearch in the background
+-h, --help            show help
+-p, --pidfile <Path>  Creates a pid file in the specified path on start
+-q, --quiet           Turns off standard output/error streams logging in console
+-s, --silent          show minimal output
+-v, --verbose         show verbose output
+ERROR: Positional arguments not allowed, found [config/elasticsearch.yml]
+
+
+./elasticsearch
+
+org.elasticsearch.tools.launchers.JavaVersionChecker
+
+
+joptsimple.OptionParser
+标准的参数解析包
+org.elasticsearch.cli.Command
+
+SecurityManager
+-Djava.security.manager -Djava.security.policy="E:/java.policy"
+或者自定义
+System.setSecurityManager()
+安全策略，白名单；所有权限显示说明，没有说明的表明没有相关权限
+
+todo
+Logback/log4j2框架
+System.out/System.err/System.in
+LogConfigurator.configure
+
+
+dubbo框架
+
+
+
+Throwable.addSuppressed
+--在catch中使用，可以用于保留，try中异常以及在catch中再次发生的异常
+
+Files.walkFileTree
+FileChannel.force - fsync - IOUtils
+
+
+
+JvmInfo
+JVM管理相关知识 - 可以用来熟悉jvm
+MemoryUsage - init/used/committed/max
+获取堆内存使用量/非堆(栈，方法区，常量池；JVM使用-XX:PermSize设置非堆内存初始值，默认是物理内存的1/64；由XX:MaxPermSize设置最大非堆内存的大小，默认是物理内存的1/4)内存使用量
+直接内存
+
+
+Thread.setDefaultUncaughtExceptionHandler
+
+
+FileSystems.getDefault().getPath
+java.nio.file.Paths.get()
+
+java.nio.Files
+
+
+final Map<String, String> propsMap;
+        {
+            final Properties props = new Properties();
+            try (InputStream stream = Files.newInputStream(descriptor)) {
+                props.load(stream);
+            }
+            propsMap = props.stringPropertyNames().stream().collect(Collectors.toMap(Function.identity(), props::getProperty));
+        }
+
+
+Natives->JNANatives
+JNA
+
+systemcallfilter - 系统调用过滤，用于安全方面
+mlockall函数将调用进程的全部虚拟地址空间加锁
+防止swap
+
+好好学下操作系统 => 鸟哥私房菜+Linux命令
+Bootstrap.initializeProbes
+
+
+System.getProperty("java.class.path")
+
+
+
+java.net.NetworkInterface
+
+java.nio.file.Path.getFileSystem().provider().checkAccess(path.toRealPath(), AccessMode.READ);
+
+java.nio.* ???????????????????
+
+JAVA安全模型
+java.security.Policy ????????
+
+
+
+
+
+
+
+
+

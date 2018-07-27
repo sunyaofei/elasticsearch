@@ -69,9 +69,7 @@ public abstract class Command implements Closeable {
                 try {
                     this.close();
                 } catch (final IOException e) {
-                    try (
-                        StringWriter sw = new StringWriter();
-                        PrintWriter pw = new PrintWriter(sw)) {
+                    try (StringWriter sw = new StringWriter(); PrintWriter pw = new PrintWriter(sw)) {
                         e.printStackTrace(pw);
                         terminal.println(sw.toString());
                     } catch (final IOException impossible) {
